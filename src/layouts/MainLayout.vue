@@ -1,6 +1,6 @@
 <template>
   <q-layout view="hHh lpR fFf">
-    <q-drawer show-if-above v-model="leftDrawerOpen" side="left" elevated>
+    <q-drawer v-model="leftDrawerOpen" side="left" elevated>
       <q-list>
         <q-item-label header>
           SpeedifyWeb version 1.0

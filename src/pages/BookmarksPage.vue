@@ -1,27 +1,33 @@
 <template>
-  <div class="bookmarks-page-wrapper justify-center">
-    <div v-show="!store.showBgModal" class="bookmarks-container justify-center">
-      <q-card v-for="(bookmark, index) in bookmarksOnly" :key="index" class="q-ma-sm text-white"
-        style="background: transparent; background-color: rgba(0,0,0,0.3); width: calc(100% / var(--bookmarksContainerCols)); height: calc(95% / var(--bookmarksContainerRows));"
-        @click.self="openUrl(bookmark)">
-        <q-card-section class="flex column">
-          <span class="flex row items-start justify-between no-wrap relative-position">
-            <q-icon v-if="bookmark.type === 'bookmark' && bookmark.icon" size="sm">
-              <img :src="bookmark.icon" alt="icon" class="custom-icon" />
-            </q-icon>
-            <p v-if="bookmark.type === 'bookmark' && bookmark.embed === ''" class="flex-auto multiline-ellipsis">
-              {{ bookmark.name }}
-            </p>
-            <q-btn v-if="bookmark.type === 'bookmark'" flat icon="more_vert"
-            @click="editBookmark(bookmark)"
-            style="position: absolute;right:0;top:0;padding:0 !important;"/>
-          </span>
-          <iframe allowfullscreen frameborder="0" v-if="bookmark.type === 'bookmark' && bookmark.embed && bookmark.embed !== ''" :src="bookmark.embed"
-            style="width: 100%;height:100%;"></iframe>
-        </q-card-section>
-        <q-card-actions>
-        </q-card-actions>
-      </q-card>
+  <div class="bookmarks-page-wrapper justify-around" ref="bookmarksPageWrapper">
+    <div class="bookmarks-container" ref="bookmarksContainer">
+      <draggable-resizable-container v-show="!store.showBgModal" :grid="[gridValues[0], gridValues[1]]" :show-grid="true"
+        grid-color="#000" style="width:100%; height:100%">
+        <draggable-resizable-vue v-for="(bookmark, index) in bookmarksOnly" :key="index"
+          v-model:w="gridValues[0]" v-model:h="gridValues[1]"
+          >
+          <q-card class="text-white" style="background: transparent; background-color: rgba(0,0,0,0.3);width: 100%;height:100%;"
+            @click.self="openUrl(bookmark)">
+
+            <q-card-section class="flex column">
+              <span class="flex row items-start justify-between no-wrap relative-position">
+                <q-icon v-if="bookmark.type === 'bookmark' && bookmark.icon" size="sm">
+                  <img :src="bookmark.icon" alt="icon" class="custom-icon" />
+                </q-icon>
+                <p v-if="bookmark.type === 'bookmark' && bookmark.embed === ''" class="flex-auto multiline-ellipsis">
+                  {{ bookmark.name }}
+                </p>
+                <q-btn v-if="bookmark.type === 'bookmark'" flat icon="more_vert" @click="editBookmark(bookmark)"
+                  style="position: absolute;right:0;top:0;padding:0 !important;z-index: 1;" />
+              </span>
+              <iframe allowfullscreen frameborder="0"
+                v-if="bookmark.type === 'bookmark' && bookmark.embed && bookmark.embed !== ''" :src="bookmark.embed"
+                :style="`position: absolute;top:0;left:0;width: ${gridValues[0]}px;height:${gridValues[1]}px;`"></iframe>
+            </q-card-section>
+
+          </q-card>
+        </draggable-resizable-vue>
+      </draggable-resizable-container>
     </div>
 
     <div v-show="!store.showBgModal" class="folders-container row justify-center items-center">
@@ -93,7 +99,7 @@
             <q-checkbox left-label v-model="tempBookmark.newtab" label="Open in new tab" />
             <div class="row justify-around items-center">
               <q-btn unelevated rounded color="secondary" label="Cancel" @click="closeEditBookmarkDialog" />
-              <q-btn unelevated rounded color="primary" label="Apply" @click="applyEditBookmarkDialog"/>
+              <q-btn unelevated rounded color="primary" label="Apply" @click="applyEditBookmarkDialog" />
             </div>
           </div>
         </q-card-section>
@@ -105,9 +111,15 @@
 
 <script setup>
 import { useQuasar } from 'quasar'
-import { ref, computed} from 'vue'
+import { ref, computed } from 'vue'
 import { useGeneral } from '../stores/general-store'
 import { validateChromeBookmarks } from '../functions/general-functions'
+
+import {
+  DraggableResizableVue,
+  DraggableResizableContainer,
+} from 'draggable-resizable-vue3'
+
 
 const q = useQuasar()
 
@@ -119,6 +131,12 @@ const showImportDialog = ref(false)
 const showEditBookmarkDialog = ref(false)
 const embedYoutube = ref(false)
 const newTab = ref(false)
+
+const bookmarksContainer = ref(null)
+const bookmarksPageWrapper = ref(null)
+
+const bookmarksContainerCols = ref(5)
+const bookmarksContainerRows = ref(5)
 
 const currentBookmark = ref({
   name: '',
@@ -224,8 +242,6 @@ function processFile() {
   reader.readAsText(importFile.value);
 }
 
-const bookmarksContainerCols = ref(3);
-const bookmarksContainerRows = ref(3);
 
 const currentFolder = ref(rootNode.value);
 const activeSlide = ref("0");
@@ -291,6 +307,18 @@ const openUrl = (bookmark) => {
   }
 }
 
+const gridValues = computed(() => {
+  if (bookmarksContainer.value) {
+    return [
+      (bookmarksContainer.value.offsetWidth - 1) / bookmarksContainerCols.value,
+      (bookmarksContainer.value.offsetHeight - 1) / bookmarksContainerRows.value
+    ]
+  }
+  else return [
+    20, 20
+  ]
+})
+
 </script>
 
 <style scoped>
@@ -301,8 +329,6 @@ const openUrl = (bookmark) => {
   width: 100%;
   height: 95%;
   z-index: 0;
-  --bookmarksContainerCols: 5;
-  --bookmarksContainerRows: 3;
 }
 
 .bookmarks-container {
@@ -310,7 +336,8 @@ const openUrl = (bookmark) => {
   height: 85%;
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   overflow: auto;
 }
 
