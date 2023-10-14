@@ -42,8 +42,10 @@ const tempBookmark = ref({
   url: '',
   embed: '',
   newtab: false,
-  x: 1,
-  y: 1,
+  x: 0,
+  y: 0,
+  w: 1,
+  h: 1,
 })
 const currentBookmark = ref({
   name: '',
@@ -52,8 +54,10 @@ const currentBookmark = ref({
   url: '',
   embed: '',
   newtab: false,
-  x: 1,
-  y: 1,
+  x: 0,
+  y: 0,
+  w: 1,
+  h: 1,
 })
 
 const applyEditBookmarkDialog = () => {

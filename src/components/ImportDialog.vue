@@ -38,12 +38,12 @@ const importFile = ref(null)
 const embedYoutube = ref(false)
 const newTab = ref(false)
 
-let lastCoordinates = { x: 0, y: 1 }  // Object to keep track of the last coordinates
+let lastCoordinates = { x: -1, y: 0 }  // Object to keep track of the last coordinates
 
 function updateCoordinates(folder) {
   lastCoordinates.x += 1;
-  if (lastCoordinates.x > folder.cols) {
-    lastCoordinates.x = 1;
+  if (lastCoordinates.x > folder.cols - 1) {
+    lastCoordinates.x = 0;
     lastCoordinates.y += 1;
   }
 }
@@ -58,7 +58,7 @@ function traverseAndAddCoordinates(root) {
     for (let node of queue) {
       if (node.type === 'folder') {
         // Reset coordinates for each folder
-        lastCoordinates = { x: 0, y: 1 };
+        lastCoordinates = { x: -1, y: 0 };
 
         // Separate bookmarks and folders for processing
         let bookmarks = node.children.filter(child => child.type === 'bookmark');
@@ -70,6 +70,21 @@ function traverseAndAddCoordinates(root) {
           bookmark.x = lastCoordinates.x;
           bookmark.y = lastCoordinates.y;
         }
+        //adding "ADD NEW BOOKMARK placeholder"
+        updateCoordinates(node);
+        node.children.push({
+          type: "bookmark",
+          name: "add",
+          icon: '',
+          url: "add",
+          embed: "",
+          newtab: false,
+          x: lastCoordinates.x,
+          y: lastCoordinates.y,
+          w: 1,
+          h: 1,
+        })
+        //*** */
         nextQueue.push(...folders);
       }
     }
@@ -116,8 +131,10 @@ function parseNode(node) {
       url: node.getAttribute('HREF'),
       embed: embed(node.getAttribute('HREF')),
       newtab: newTab.value,
-      x: 1,
-      y: 1,
+      x: 0,
+      y: 0,
+      w: 1,
+      h: 1,
     };
   }
   return undefined;

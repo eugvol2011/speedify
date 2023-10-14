@@ -3,7 +3,18 @@ import { defineStore } from 'pinia'
 const rootNode = {
   type: "folder",
   name: "root",
-  children: [],
+  children: [{
+    type: "bookmark",
+    name: "add",
+    icon: '',
+    url: "add",
+    embed: "",
+    newtab: false,
+    x: 0,
+    y: 0,
+    w: 1,
+    h: 1,
+  }],
   cols: 6,
   rows: 5
 }
