@@ -1,29 +1,33 @@
 import { defineStore } from 'pinia'
 
+const defaultCols = 5
+const defaultRows = 5
+const defaultFolderIcon = "../folder.svg"
+
 const rootNode = {
   type: "folder",
   name: "root",
-  children: [{
-    type: "bookmark",
-    name: "add",
-    icon: '',
-    url: "add",
-    embed: "",
-    newtab: false,
-    x: 0,
-    y: 0,
-    w: 1,
-    h: 1,
-  }],
-  cols: 6,
-  rows: 5
+  icon: defaultFolderIcon,
+  screens: [
+    {
+      cols: defaultCols,
+      rows: defaultRows,
+      children: []
+    }
+  ],
+  x: 0,
+  y: 0,
 }
+
 
 export const useBookmarks = defineStore({
   id: 'bookmarks',
   state: () => ({
     showImportDialog: false,
     rootNode: rootNode,
+    defaultCols: defaultCols,
+    defaultRows: defaultRows,
+    defaultFolderIcon: defaultFolderIcon,
     showGridDialog: false,
     activeFolder: rootNode,
     showEditBookmarkDialog: false,
@@ -36,7 +40,7 @@ export const useBookmarks = defineStore({
       this.showImportDialog = !this.showImportDialog
     },
     addToRootNodeChildren (node) {
-      this.rootNode.children.push(node)
+      this.rootNode.screens[0].children.push(node)
     },
     toggleShowGridDialog() {
       this.showGridDialog = !this.showGridDialog

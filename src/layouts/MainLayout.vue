@@ -11,9 +11,7 @@
 
     <q-page-container class="container" @dblclick="onDblClick">
       <q-img :src="store.currentBackgroundImage !== undefined ? store.currentBackgroundImage : ''" spinner-color="white"
-        style="position: absolute; top:0px; left:0px; width: 100%; height: 100%; z-index: -2;"
-        class="background-image"
-      />
+        style="position: absolute; top:0px; left:0px; width: 100%; height: 100%; z-index: -2;" class="background-image" />
       <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
       <router-view />
       <BgModal v-if="store.showBgModal" />
@@ -37,13 +35,13 @@ const linksList = [
     title: 'Bookmarks',
     caption: 'Use and manage your bookmarks',
     icon: 'bookmarks',
-    link: () => { router.push({ name: 'Bookmarks'}); }
+    link: () => { router.push({ name: 'Bookmarks' }); }
   },
   {
     title: 'ToDo List',
     caption: 'Manage your tasks and reminders',
     icon: 'check_circle',
-    link: () => { router.push({ name: 'Todo'}); }
+    link: () => { router.push({ name: 'Todo' }); }
   },
   {
     title: 'Sign Out',
@@ -60,20 +58,7 @@ const toggleLeftDrawer = () => {
 }
 
 const onDblClick = (event) => {
-  console.log("DBL CLICKED")
-  let targetElement = event.target;
-  let outside = true
-
-  while (targetElement != null) {
-    console.log(targetElement)
-    if (targetElement.classList.contains('q-btn') || targetElement.classList.contains('q-card')) {
-      outside = false
-      return
-    }
-    targetElement = targetElement.parentElement;
-  }
-
-  if (outside) {
+  if (!Array.from(event.target.classList).includes('vgl-item') && !Array.from(event.target.classList).includes('icon')) {
     store.changeShowBgModal();
     leftDrawerOpen.value = false;
   }
@@ -94,6 +79,7 @@ onBeforeMount(async () => {
   height: 100vh;
   position: relative;
 }
+
 .background-image {
   position: absolute;
   top: 0;

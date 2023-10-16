@@ -49,7 +49,7 @@ function updateCoordinates(folder) {
 }
 
 function traverseAndAddCoordinates(root) {
-  let queue = [root];  // Initialize the queue with the root node
+  let queue = [root.screens];  // Initialize the queue with the root node
 
   while (queue.length > 0) {
     let nextQueue = [];  // Prepare the next level's queue
@@ -70,21 +70,6 @@ function traverseAndAddCoordinates(root) {
           bookmark.x = lastCoordinates.x;
           bookmark.y = lastCoordinates.y;
         }
-        //adding "ADD NEW BOOKMARK placeholder"
-        updateCoordinates(node);
-        node.children.push({
-          type: "bookmark",
-          name: "add",
-          icon: '',
-          url: "add",
-          embed: "",
-          newtab: false,
-          x: lastCoordinates.x,
-          y: lastCoordinates.y,
-          w: 1,
-          h: 1,
-        })
-        //*** */
         nextQueue.push(...folders);
       }
     }
@@ -108,6 +93,7 @@ function parseNode(node) {
   if (node.tagName === 'H3') {
     const nextSibling = node.nextElementSibling;
     const children = [];
+    const screens = [];
     if (nextSibling && nextSibling.tagName === 'DL') {
       for (const childNode of Array.from(nextSibling.children)) {
         if (childNode.tagName === 'DT') {
@@ -116,12 +102,36 @@ function parseNode(node) {
         }
       }
     }
+
+    const itemsPerScreen =  bookmarksStore.defaultCols * bookmarksStore.defaultRows - 1
+    const screensQty = Math.ceil(children.length / itemsPerScreen)
+
+    for(let i=0; i<screensQty; i++) {
+      let x=0
+      let y=0
+      children.slice(i*itemsPerScreen,i*itemsPerScreen+itemsPerScreen).forEach((child) => {
+        child.x = x
+        child.y = y
+        x++
+        if (x > bookmarksStore.defaultCols-1) {
+          x = 0
+          y++
+        }
+      })
+      screens.push({
+        cols: bookmarksStore.defaultCols,
+        rows: bookmarksStore.defaultRows,
+        children: children.slice(i*itemsPerScreen,i*itemsPerScreen+itemsPerScreen)
+      })
+    }
+
     return {
       type: "folder",
       name: node.textContent,
-      children,
-      cols: 6,
-      rows: 5
+      icon: bookmarksStore.defaultFolderIcon,
+      screens,
+      x: 0,
+      y: 0,
     };
   } else if (node.tagName === 'A') {
     return {
@@ -167,7 +177,9 @@ function processFile() {
           }
         }
       }
-      traverseAndAddCoordinates(bookmarksStore.rootNode)
+
+      //traverseAndAddCoordinates(bookmarksStore.rootNode)
+      console.log(bookmarksStore.rootNode)
     }
     else {
       q.notify({
