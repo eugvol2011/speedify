@@ -41,35 +41,20 @@
               :x="item.x"
               :y="item.y"
               @moved="moved(screenIndex)"
+              @click="handleItemClick(screen.children[item.i], $event)"
+              @mouseleave="hover(null)"
+              @mouseover="hover(item.i)"
               drag-allow-from=".vue-draggable-handle"
               drag-ignore-from=".no-drag"
             >
+              <!--FODLER & BOOKMARK-->
               <div
-                v-if="screen.children[item.i] && screen.children[item.i].type === 'folder'"
-                @dblclick="navigateToFolder(screen.children[item.i])"
-                @mouseleave="hover(null)"
-                @mouseover="hover(item.i)"
-                class="folder"
-                style="width: 100%; height:100%; display: flex; flex-direction: column; justify-content: center; align-items: center;"
-              >
-                <img
-                  :src="screen.children[item.i].icon"
-                  class="icon"
-                  alt="icon"
-                  style="width: 70%; height: 70%"
-                />
-                <span :style="hoverIndex === item.i ?
-                  { 'background-color': 'transparent' } :
-                  { 'background-color': 'rgba(0, 0, 0, 0.5)', 'border-radius': '10%' }">
-                  {{ screen.children[item.i].name }}
-                </span>
-              </div>
-              <div
-                v-if="screen.children[item.i] && screen.children[item.i].type === 'bookmark'"
-                @click="openUrl(screen.children[item.i].url)"
-                @mouseleave="hover(null)"
-                @mouseover="hover(item.i)"
-                class="bookmark"
+                v-if="screen.children[item.i] &&
+                      (screen.children[item.i].type === 'bookmark' ||
+                      screen.children[item.i].type === 'folder')"
+
+
+                :class="screen.children[item.i].type"
                 style="width: 100%; height:100%; display: flex; flex-direction: column; justify-content: center; align-items: center;"
               >
                 <img
@@ -104,7 +89,7 @@
                     <q-list dense>
                       <q-item clickable>
                         <q-item-section
-                          @click="callEditBookmark(screen.children[item.i])">Edit</q-item-section
+                          @click="handleEditClick(screen.children[item.i])">Edit</q-item-section
                         >
                       </q-item>
                       <q-item clickable>
@@ -118,6 +103,30 @@
                     </q-list>
                   </q-menu>
                 </q-icon>
+              </div>
+              <!--EMPTY ITEM-->
+              <div
+                v-if="screen.children[item.i] === undefined && hoverIndex === item.i"
+                style="width: 100%; height:100%; display: flex; flex-direction: row; justify-content: center; align-items: center;"
+              >
+                <img
+                  class="no-drag"
+                  :src="bookmarksStore.defaultFolderIcon"
+                  alt="newFolderIcon"
+                  style="width: 25%; height: 25%"
+                />
+                <img
+                  class="no-drag"
+                  :src="bookmarksStore.defaultBookmarkIcon"
+                  alt="newBookmarkIcon"
+                  style="width: 25%; height: 25%"
+                />
+                <img
+                  class="no-drag"
+                  :src="bookmarksStore.defaultNoteIcon"
+                  alt="newNoteIcon"
+                  style="width: 25%; height: 25%"
+                />
               </div>
             </GridItem>
           </GridLayout>
@@ -178,13 +187,12 @@ import ImportDialog from '../components/ImportDialog.vue'
 import GridDialog from '../components/GridDialog.vue'
 import EditBookmarkDialog from '../components/EditBookmarkDialog.vue'
 
-import { ref, computed, reactive, watch, onMounted, onBeforeUpdate, onUpdated } from 'vue'
+import { ref, computed, reactive, watch, onMounted} from 'vue'
 import { useGeneral } from '../stores/general-store'
 import { useBookmarks } from '../stores/bookmarks-store'
 
 
 import { GridLayout, GridItem } from 'grid-layout-plus'
-import { bexBackground } from 'quasar/wrappers'
 
 
 
@@ -215,7 +223,6 @@ const bookmarksPageWrapper = ref(null)
 const layout = reactive([])
 
 function buildGrid() {
-  console.log('build-grid')
   layout.length = 0
   bookmarksStore.activeFolder.screens[+bookmarksStore.slide].children.forEach((item, index) => {
     layout.push({ x: item.x, y: item.y, w: 1, h: 1, i: index, static: false })
@@ -333,15 +340,33 @@ function findParentFolder(root, child) {
 
 
 const openUrl = (bookmark) => {
-  /*
    if (bookmark.newtab) {
      window.open(bookmark.url, '_blank');
    } else {
      window.location.href = bookmark.url;
    }
-   */
 }
 
+
+const handleItemClick = (item, event) => {
+  if (!event.target.classList.contains('vue-draggable-handle')) {
+    if (item !== undefined && item.type !== 'removed') {
+      if (item.type === 'folder') {
+        navigateToFolder(item)
+      } else if (item.type === 'bookmark') {
+        openUrl(item)
+      }
+    } else {
+      console.log('EMPTY CLICKED')
+    }
+  }
+}
+
+const handleEditClick = (item) => {
+  if (item.type === 'bookmark') {
+    callEditBookmark(item)
+  }
+}
 
 </script>
 

@@ -4,6 +4,8 @@ const defaultCols = 5
 const defaultRows = 5
 const defaultMargin = 10
 const defaultFolderIcon = "../folder.svg"
+const defaultBookmarkIcon = "../bookmark.svg"
+const defaultNoteIcon = "../note.svg"
 
 const rootNode = {
   type: "folder",
@@ -31,6 +33,8 @@ export const useBookmarks = defineStore({
     defaultRows: defaultRows,
     defaultMargin: defaultMargin,
     defaultFolderIcon: defaultFolderIcon,
+    defaultBookmarkIcon: defaultBookmarkIcon,
+    defaultNoteIcon: defaultNoteIcon,
     showGridDialog: false,
     activeFolder: rootNode,
     showEditBookmarkDialog: false,
