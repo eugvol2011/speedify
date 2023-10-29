@@ -40,24 +40,27 @@
 
 <script setup>
 import { useBookmarks } from 'src/stores/bookmarks-store';
-import { ref, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 
 const bookmarksStore = useBookmarks()
 
-const currentCols = ref(bookmarksStore.activeFolder ? bookmarksStore.activeFolder.cols : 20)
-const currentRows = ref(bookmarksStore.activeFolder ? bookmarksStore.activeFolder.rows : 20)
+const currentCols = ref(bookmarksStore.activeFolder.screens[+bookmarksStore.slide].cols)
+const currentRows = ref(bookmarksStore.activeFolder.screens[+bookmarksStore.slide].rows)
+const emit = defineEmits(['build-grid'])
 
 const applyGrid = () => {
-  if (bookmarksStore.activeFolder) {
-    bookmarksStore.activeFolder.cols = currentCols.value
-    bookmarksStore.activeFolder.rows = currentRows.value
+    bookmarksStore.activeFolder.screens[+bookmarksStore.slide].cols = currentCols.value
+    bookmarksStore.activeFolder.screens[+bookmarksStore.slide].rows = currentRows.value
     bookmarksStore.toggleShowGridDialog()
-  }
+    emit('build-grid')
 }
 
-watch(bookmarksStore.activeFolder, (newActiveFolder) => {
-  currentCols.value = newActiveFolder.cols
-  currentRows.value = newActiveFolder.rows
+onMounted(() => {
+  console.log('cols', bookmarksStore.activeFolder.screens[+bookmarksStore.slide].cols)
+  console.log('rows', bookmarksStore.activeFolder.screens[+bookmarksStore.slide].rows)
+  currentCols.value = bookmarksStore.activeFolder.screens[+bookmarksStore.slide].cols
+  currentRows.value = bookmarksStore.activeFolder.screens[+bookmarksStore.slide].rows
 })
+
 
 </script>

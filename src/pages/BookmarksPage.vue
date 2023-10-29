@@ -1,57 +1,175 @@
 <template>
   <div class="bookmarks-page-wrapper justify-around" ref="bookmarksPageWrapper">
     <div class="bookmarks-container" ref="bookmarksContainer">
-
-      <q-carousel v-show="!store.showBgModal" v-model="slide" transition-prev="scale" transition-next="scale" swipeable
-        animated control-color="white" navigation padding arrows height="100%"
-        class="bg-primary text-white shadow-1 rounded-borders"
+      <q-carousel
+        v-show="!store.showBgModal"
+        v-model="bookmarksStore.slide"
         @transition="buildGrid()"
-        style="background-color: transparent !important;">
-        <q-carousel-slide v-for="(screen, screenIndex) in bookmarksStore.activeFolder.screens" :key="screenIndex"
-          :name="`${screenIndex}`">
-          <GridLayout v-if="bookmarksContainer" v-model:layout="layout"
-            :row-height="bookmarksContainer.offsetHeight / screen.rows * 0.9" :col-num="screen.cols" is-draggable
-            is-resizable vertical-compact use-css-transforms
-            :is-bounded="true">
-            <GridItem v-for="item in layout" :key="item.i" :i="item.i" :x="item.x" :y="item.y" :w="item.w" :h="item.h"
-              @moved="moved(screenIndex)" is-draggable is-resizable>
-              <div @dblclick="navigateToFolder(screen.children[item.i])" class="folder"
+        class="bg-primary text-white shadow-1 rounded-borders"
+        control-color="white"
+        height="100%"
+        style="background-color: transparent !important;"
+        transition-next="scale"
+        transition-prev="scale"
+        animated
+        arrows
+        navigation
+        padding
+        swipeable
+      >
+        <q-carousel-slide
+          v-for="(screen, screenIndex) in bookmarksStore.activeFolder.screens"
+          :key="screenIndex"
+          :name="`${screenIndex}`"
+          style="background-color: transparent; padding-top: 0; padding-bottom: 0; height: 100%;"
+        >
+          <GridLayout
+            v-if="bookmarksContainer"
+            v-model:layout="layout"
+            :col-num="screen.cols"
+            :is-bounded="true"
+            :margin="[bookmarksStore.defaultMargin, bookmarksStore.defaultMargin]"
+            :max-rows="screen.rows"
+            :row-height="bookmarksContainer.offsetHeight / screen.rows - screen.margin - screen.margin / screen.rows"
+          >
+            <GridItem
+              v-for="item in layout"
+              :key="item.i"
+              :h="item.h"
+              :i="item.i"
+              :w="item.w"
+              :x="item.x"
+              :y="item.y"
+              @moved="moved(screenIndex)"
+              drag-allow-from=".vue-draggable-handle"
+              drag-ignore-from=".no-drag"
+            >
+              <div
+                v-if="screen.children[item.i] && screen.children[item.i].type === 'folder'"
+                @dblclick="navigateToFolder(screen.children[item.i])"
+                @mouseleave="hover(null)"
+                @mouseover="hover(item.i)"
+                class="folder"
                 style="width: 100%; height:100%; display: flex; flex-direction: column; justify-content: center; align-items: center;"
-                v-if="screen.children[item.i] && screen.children[item.i].type === 'folder'">
-                <img class="icon" :src="screen.children[item.i].icon" alt="icon" style="width: 70%; height: 70%" />
-                {{ screen.children[item.i].name }}
+              >
+                <img
+                  :src="screen.children[item.i].icon"
+                  class="icon"
+                  alt="icon"
+                  style="width: 70%; height: 70%"
+                />
+                <span :style="hoverIndex === item.i ?
+                  { 'background-color': 'transparent' } :
+                  { 'background-color': 'rgba(0, 0, 0, 0.5)', 'border-radius': '10%' }">
+                  {{ screen.children[item.i].name }}
+                </span>
               </div>
-              <div @click="openUrl(screen.children[item.i].url)" class="bookmark"
+              <div
+                v-if="screen.children[item.i] && screen.children[item.i].type === 'bookmark'"
+                @click="openUrl(screen.children[item.i].url)"
+                @mouseleave="hover(null)"
+                @mouseover="hover(item.i)"
+                class="bookmark"
                 style="width: 100%; height:100%; display: flex; flex-direction: column; justify-content: center; align-items: center;"
-                v-if="screen.children[item.i] && screen.children[item.i].type === 'bookmark'">
-                <img :src="screen.children[item.i].icon" alt="icon" style="width: 70%; height: 70%" />
-                {{ screen.children[item.i].name }}
+              >
+                <img
+                  class="no-drag"
+                  :src="screen.children[item.i].icon"
+                  alt="icon"
+                  style="width: 60%; height: 60%"
+                />
+                <span
+                  class="no-drag"
+                  :style="hoverIndex === item.i ?
+                  { 'background-color': 'transparent' } :
+                  { 'background-color': 'rgba(0, 0, 0, 0.5)', 'border-radius': '10%'}">
+                  {{ screen.children[item.i].name }}
+                </span>
+                <q-icon
+                  v-if="hoverIndex === item.i"
+                  class="vue-draggable-handle"
+                  name="more_vert"
+                  size="md"
+                  style="position: absolute; top: 0; right: 0;"
+                >
+                  <q-menu
+                    v-model="showItemMenu"
+                    transition-hide="scale"
+                    transition-show="scale"
+                    auto-close
+                    fit
+                    context-menu
+                    class="bg-black text-white"
+                  >
+                    <q-list dense>
+                      <q-item clickable>
+                        <q-item-section
+                          @click="callEditBookmark(screen.children[item.i])">Edit</q-item-section
+                        >
+                      </q-item>
+                      <q-item clickable>
+                        <q-item-section>Move</q-item-section>
+                      </q-item>
+                      <q-item clickable>
+                        <q-item-section
+                          @click="remove(screen.children, item.i)">Remove</q-item-section
+                        >
+                      </q-item>
+                    </q-list>
+                  </q-menu>
+                </q-icon>
               </div>
             </GridItem>
           </GridLayout>
-
-
         </q-carousel-slide>
       </q-carousel>
-
     </div>
 
-    <div v-show="!store.showBgModal" class="folders-container row justify-center items-center">
-      <q-btn dense round icon="keyboard_arrow_up" color="secondary" @click="navigateUp"
-        v-if="bookmarksStore.activeFolder !== bookmarksStore.rootNode" />
-    </div>
-
-    <div v-show="!store.showBgModal" class="row justify-end">
-      <q-btn class="glossy" rounded color="primary" label="Grid" @click="bookmarksStore.toggleShowGridDialog()" />
-      <q-btn class="glossy" rounded color="primary" label="Import" @click="bookmarksStore.toggleShowImportDialog()" />
+    <div
+      v-show="!store.showBgModal"
+      class="row justify-start items-center q-gutter-x-md q-px-lg"
+      style="background-color: rgba(0, 0, 0, 0.5);"
+    >
+      <q-btn
+        @click="bookmarksStore.toggleShowGridDialog()"
+        class="glossy"
+        color="primary"
+        label="Grid"
+        rounded
+      />
+      <q-btn
+        @click="bookmarksStore.toggleShowImportDialog()"
+        class="glossy"
+        color="primary"
+        label="Import"
+        rounded
+      />
+      <q-btn
+        v-if="bookmarksStore.activeFolder !== bookmarksStore.rootNode"
+        @click="navigateUp"
+        color="secondary"
+        icon="keyboard_arrow_up"
+        dense
+        round
+      />
+      <q-breadcrumbs active-color="white">
+        <q-breadcrumbs-el
+          v-for="crumb in bookmarksStore.breadCrumbs"
+          :label="crumb.name"
+          @click="navigateToFolder(crumb)"
+          style="font-size: 20px; color:aqua;"
+        />
+      </q-breadcrumbs>
     </div>
 
     <ImportDialog />
 
-    <GridDialog />
+    <GridDialog
+      v-if="bookmarksStore.showGridDialog"
+      @build-grid="buildGrid()"
+    />
 
     <EditBookmarkDialog ref="editBookmarkDialogRef" />
-
   </div>
 </template>
 
@@ -60,12 +178,13 @@ import ImportDialog from '../components/ImportDialog.vue'
 import GridDialog from '../components/GridDialog.vue'
 import EditBookmarkDialog from '../components/EditBookmarkDialog.vue'
 
-import { ref, computed, reactive, watch, onMounted } from 'vue'
+import { ref, computed, reactive, watch, onMounted, onBeforeUpdate, onUpdated } from 'vue'
 import { useGeneral } from '../stores/general-store'
 import { useBookmarks } from '../stores/bookmarks-store'
 
 
 import { GridLayout, GridItem } from 'grid-layout-plus'
+import { bexBackground } from 'quasar/wrappers'
 
 
 
@@ -73,11 +192,19 @@ import { GridLayout, GridItem } from 'grid-layout-plus'
 const store = useGeneral()
 const bookmarksStore = useBookmarks()
 const editBookmarkDialogRef = ref(null)
-const slide = ref("0")
+const hoverIndex = ref(null)
+const hover = (i) => {
+  if (showItemMenu.value===false) {
+    hoverIndex.value = i
+  }
+}
+const showItemMenu = ref(false)
 
 
 const callEditBookmark = (bookmark) => {
-  editBookmarkDialogRef.value.editBookmark(bookmark)
+  if (editBookmarkDialogRef.value) {
+    editBookmarkDialogRef.value.editBookmark(bookmark)
+  }
 }
 
 
@@ -88,8 +215,9 @@ const bookmarksPageWrapper = ref(null)
 const layout = reactive([])
 
 function buildGrid() {
+  console.log('build-grid')
   layout.length = 0
-  bookmarksStore.activeFolder.screens[+slide.value].children.forEach((item, index) => {
+  bookmarksStore.activeFolder.screens[+bookmarksStore.slide].children.forEach((item, index) => {
     layout.push({ x: item.x, y: item.y, w: 1, h: 1, i: index, static: false })
   })
   function fillGrid(layout, cols, rows) {
@@ -101,14 +229,33 @@ function buildGrid() {
       }
     }
   }
-  fillGrid(layout, bookmarksStore.activeFolder.screens[0].cols, bookmarksStore.activeFolder.screens[0].rows)
-  console.log('Layout:',layout)
+  fillGrid(layout, bookmarksStore.activeFolder.screens[+bookmarksStore.slide].cols, bookmarksStore.activeFolder.screens[+bookmarksStore.slide].rows)
+  console.log('Layout:', layout)
 }
 
 onMounted(() => {
   buildGrid()
 })
 
+
+const remove = (array, index) => {
+  array[index] = bookmarksStore.createBookmarkObject(
+    "removed",
+    "removed",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    false,
+    array[index].x,
+    array[index].y,
+    1,
+    1
+  )
+  showItemMenu.value = false
+}
 
 const moved = (screenIndex) => {
   layout.forEach((item, index) => {
@@ -117,24 +264,26 @@ const moved = (screenIndex) => {
       bookmarksStore.activeFolder.screens[screenIndex].children[index].y = item.y
     }
   })
-  //buildGrid()
   console.log(layout)
 }
 
 
 
-
-
 function navigateToFolder(folder) {
-  bookmarksStore.setActiveFolder(folder)
-  slide.value = "0"
-  buildGrid()
+  if (folder !== bookmarksStore.activeFolder) {
+    let currentFolder = bookmarksStore.activeFolder
+    bookmarksStore.setActiveFolder(folder)
+    buildGrid()
+    currentFolder.screens.forEach((screen) => {
+      screen.children = screen.children.filter(item => item.type !== 'removed')
+    })
+    console.log(currentFolder)
+  }
 }
 
 function navigateUp() {
   if (bookmarksStore.activeFolder && bookmarksStore.activeFolder !== bookmarksStore.rootNode) {
     const parentFolder = findParentFolder(bookmarksStore.rootNode, bookmarksStore.activeFolder);
-    //console.log('PARENT FOLDER:', parentFolder.name)
     if (parentFolder) {
       navigateToFolder(parentFolder)
     }
@@ -193,19 +342,6 @@ const openUrl = (bookmark) => {
    */
 }
 
-const gridValues = computed(() => {
-  if (bookmarksContainer.value && bookmarksStore.activeFolder) {
-    return [
-      bookmarksContainer.value.offsetWidth / bookmarksStore.activeFolder.cols,
-      bookmarksContainer.value.offsetHeight / bookmarksStore.activeFolder.rows
-    ]
-  }
-  else return [
-    20, 20
-  ]
-})
-
-
 
 </script>
 
@@ -222,6 +358,7 @@ const gridValues = computed(() => {
 :deep(.vgl-item:not(.vgl-item--placeholder)):hover {
   background-color: rgba(0, 0, 0, 0.5);
   border: 1px solid black;
+  border-radius: 10%;
 }
 
 :deep(.vgl-item--resizing) {
@@ -233,9 +370,6 @@ const gridValues = computed(() => {
 }
 
 .bookmarks-page-wrapper {
-  /*position: absolute;
-  top: 0px;
-  left: 0px;*/
   width: 100%;
   height: 95%;
   z-index: 0;
@@ -243,17 +377,12 @@ const gridValues = computed(() => {
 
 .bookmarks-container {
   width: 100%;
-  height: 85%;
+  height: 96%;
   /*display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;*/
   overflow: auto;
-}
-
-.folders-container {
-  width: 100%;
-  overflow-x: auto;
 }
 
 .no-wrap {

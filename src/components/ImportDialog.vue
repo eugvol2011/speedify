@@ -38,45 +38,6 @@ const importFile = ref(null)
 const embedYoutube = ref(false)
 const newTab = ref(false)
 
-let lastCoordinates = { x: -1, y: 0 }  // Object to keep track of the last coordinates
-
-function updateCoordinates(folder) {
-  lastCoordinates.x += 1;
-  if (lastCoordinates.x > folder.cols - 1) {
-    lastCoordinates.x = 0;
-    lastCoordinates.y += 1;
-  }
-}
-
-function traverseAndAddCoordinates(root) {
-  let queue = [root.screens];  // Initialize the queue with the root node
-
-  while (queue.length > 0) {
-    let nextQueue = [];  // Prepare the next level's queue
-
-    // Process all nodes at the current level
-    for (let node of queue) {
-      if (node.type === 'folder') {
-        // Reset coordinates for each folder
-        lastCoordinates = { x: -1, y: 0 };
-
-        // Separate bookmarks and folders for processing
-        let bookmarks = node.children.filter(child => child.type === 'bookmark');
-        let folders = node.children.filter(child => child.type === 'folder');
-
-        // Process all bookmarks in the current folder
-        for (let bookmark of bookmarks) {
-          updateCoordinates(node);  // Update coordinates based on the current folder
-          bookmark.x = lastCoordinates.x;
-          bookmark.y = lastCoordinates.y;
-        }
-        nextQueue.push(...folders);
-      }
-    }
-    queue = nextQueue;
-  }
-}
-
 function embed(href) {
   if (href) {
     const url = new URL(href)
@@ -88,6 +49,7 @@ function embed(href) {
   }
   return ''
 }
+
 
 function parseNode(node) {
   if (node.tagName === 'H3') {
@@ -103,17 +65,17 @@ function parseNode(node) {
       }
     }
 
-    const itemsPerScreen =  bookmarksStore.defaultCols * bookmarksStore.defaultRows - 1
+    const itemsPerScreen = bookmarksStore.defaultCols * bookmarksStore.defaultRows - 1
     const screensQty = Math.ceil(children.length / itemsPerScreen)
 
-    for(let i=0; i<screensQty; i++) {
-      let x=0
-      let y=0
-      children.slice(i*itemsPerScreen,i*itemsPerScreen+itemsPerScreen).forEach((child) => {
+    for (let i = 0; i < screensQty; i++) {
+      let x = 0
+      let y = 0
+      children.slice(i * itemsPerScreen, i * itemsPerScreen + itemsPerScreen).forEach((child) => {
         child.x = x
         child.y = y
         x++
-        if (x > bookmarksStore.defaultCols-1) {
+        if (x > bookmarksStore.defaultCols - 1) {
           x = 0
           y++
         }
@@ -121,7 +83,8 @@ function parseNode(node) {
       screens.push({
         cols: bookmarksStore.defaultCols,
         rows: bookmarksStore.defaultRows,
-        children: children.slice(i*itemsPerScreen,i*itemsPerScreen+itemsPerScreen)
+        margin: bookmarksStore.defaultMargin,
+        children: children.slice(i * itemsPerScreen, i * itemsPerScreen + itemsPerScreen)
       })
     }
 
@@ -134,18 +97,21 @@ function parseNode(node) {
       y: 0,
     };
   } else if (node.tagName === 'A') {
-    return {
-      type: "bookmark",
-      name: node.textContent,
-      icon: node.getAttribute('ICON'),
-      url: node.getAttribute('HREF'),
-      embed: embed(node.getAttribute('HREF')),
-      newtab: newTab.value,
-      x: 0,
-      y: 0,
-      w: 1,
-      h: 1,
-    };
+    return bookmarksStore.createBookmarkObject(
+      "bookmark",
+      node.textContent,
+      node.getAttribute('ICON'),
+      `https://marvellous-sapphire-chipmunk.faviconkit.com/${(new URL(node.getAttribute('HREF')).host)}/256`,
+      `https://www.google.com/s2/favicons?domain=${(new URL(node.getAttribute('HREF')).host)}&sz=256`,
+      `https://marvellous-sapphire-chipmunk.faviconkit.com/${(new URL(node.getAttribute('HREF')).host)}/256`,
+      node.getAttribute('HREF'),
+      embed(node.getAttribute('HREF')),
+      newTab.value,
+      0,
+      0,
+      1,
+      1,
+    )
   }
   return undefined;
 }
@@ -178,7 +144,6 @@ function processFile() {
         }
       }
 
-      //traverseAndAddCoordinates(bookmarksStore.rootNode)
       console.log(bookmarksStore.rootNode)
     }
     else {
