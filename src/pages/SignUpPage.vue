@@ -67,17 +67,19 @@ import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { useRouter } from 'vue-router'
 import { collection, addDoc } from 'firebase/firestore'
 import { doc, setDoc } from "firebase/firestore"
+import { useBookmarks } from '../stores/bookmarks-store'
+
+const bookmarksStore = useBookmarks()
 
 const router = useRouter()
 
-const email = ref<string>('')
-const password = ref<string>('')
-const confirmPassword = ref<string>('')
-const visibility = ref<boolean>(false)
+const email = ref('')
+const password = ref('')
+const confirmPassword = ref('')
+const visibility = ref(false)
 
 const createUserInDB = async() => {
   try {
-    // Assuming the email is always available for authenticated users
     const userEmail = auth.currentUser?.email;
 
     if (!userEmail) {
@@ -90,6 +92,7 @@ const createUserInDB = async() => {
       email: auth.currentUser?.email,
       backgroundImage: "",
       avatarPicture: "",
+      bookmarksContent: JSON.stringify(bookmarksStore.rootNode)
     };
 
     await setDoc(userDocRef, dataToAdd);  // setDoc will create or overwrite the document
@@ -129,10 +132,9 @@ const signInWithGoogle = async () => {
 
 <style lang="scss">
 .custom-icon {
-  background: url('../assets/google.svg') center/cover no-repeat;
+  background: url('../google.svg') center/cover no-repeat;
   height: 24px;
   width: 24px;
-  /* Override the default q-icon styles */
   font-family: 'Arial', sans-serif;
   color: transparent;
   text-align: center;

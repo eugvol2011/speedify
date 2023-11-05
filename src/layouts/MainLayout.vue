@@ -26,8 +26,10 @@ import BgModal from 'components/BgModal.vue'
 import { ref, onBeforeMount } from 'vue'
 import { auth } from 'boot/firebase'
 import { useRouter } from 'vue-router'
+import { useBookmarks } from '../stores/bookmarks-store'
 
 const store = useGeneral()
+const bookmarksStore = useBookmarks()
 const router = useRouter()
 
 const linksList = [

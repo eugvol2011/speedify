@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+import { auth, db } from '../boot/firebase'
+import { getDocs, query, where, collection } from 'firebase/firestore'
 
 const defaultCols = 5
 const defaultRows = 5
@@ -6,6 +8,8 @@ const defaultMargin = 10
 const defaultFolderIcon = "../folder.svg"
 const defaultBookmarkIcon = "../bookmark.svg"
 const defaultNoteIcon = "../note.svg"
+const defaultImportIcon = "../import.svg"
+const defaultPasteIcon = "../paste.svg"
 
 const rootNode = {
   type: "folder",
@@ -35,9 +39,13 @@ export const useBookmarks = defineStore({
     defaultFolderIcon: defaultFolderIcon,
     defaultBookmarkIcon: defaultBookmarkIcon,
     defaultNoteIcon: defaultNoteIcon,
+    defaultImportIcon: defaultImportIcon,
+    defaultPasteIcon: defaultPasteIcon,
     showGridDialog: false,
     activeFolder: rootNode,
     showEditBookmarkDialog: false,
+    showEditFolderDialog: false,
+    showEditNoteDialog: false,
     slide: "0",
     breadCrumbs: [rootNode]
   }),
@@ -49,7 +57,8 @@ export const useBookmarks = defineStore({
       this.showImportDialog = !this.showImportDialog
     },
     addToRootNodeChildren(node) {
-      this.rootNode.screens[0].children.push(node)
+      //this.rootNode.screens[0].children.push(node)
+      this.activeFolder.screens[+this.slide].children.push(node)
     },
     toggleShowGridDialog() {
       this.showGridDialog = !this.showGridDialog
@@ -67,6 +76,12 @@ export const useBookmarks = defineStore({
     },
     toggleShowEditBookmarkDialog() {
       this.showEditBookmarkDialog = !this.showEditBookmarkDialog
+    },
+    toggleShowEditFolderDialog() {
+      this.showEditFolderDialog = !this.showEditFolderDialog
+    },
+    toggleShowEditNoteDialog() {
+      this.showEditNoteDialog = !this.showEditNoteDialog
     },
     createBookmarkObject(
       type,
@@ -99,5 +114,44 @@ export const useBookmarks = defineStore({
         h: h
       }
     },
+    createFolderObject(
+      type,
+      name,
+      icon,
+      cols,
+      rows,
+      margin
+    ) {
+      return {
+        type: type,
+        name: name,
+        icon: icon,
+        screens: [
+          {
+            cols: cols,
+            rows: rows,
+            margin: margin,
+            children: []
+          }
+        ],
+        x: 0,
+        y: 0,
+      }
+    },
+    async fetchBookmarksContent() {
+      // Define the query for the current user's background image
+      const q = query(collection(db, "users"), where("email", "==", auth.currentUser?.email))
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        // Assuming each user has only one document, we'll use the first document in the result.
+        const docData = querySnapshot.docs[0].data();
+        this.rootNode = JSON.parse(docData.bookmarksContent) || "";
+        this.activeFolder = this.rootNode
+        this.breadCrumbs = [this.rootNode]
+        console.log('FETCHED ROOT NODE', this.rootNode)
+      } else {
+        this.bookmarksContent = "";
+      }
+    }
   },
 });

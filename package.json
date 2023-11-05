@@ -12,10 +12,14 @@
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",
+    "@vueup/vue-quill": "^1.2.0",
     "firebase": "^10.4.0",
     "grid-layout-plus": "^1.0.3",
+    "highlight.js": "^11.9.0",
     "pinia": "^2.0.11",
     "quasar": "^2.6.0",
+    "quill-blot-formatter": "^1.0.5",
+    "quill-magic-url": "^4.2.0",
     "vue-router": "^4.0.0",
     "vuedraggable": "^4.1.0"
   },

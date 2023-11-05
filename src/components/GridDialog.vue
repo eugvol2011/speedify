@@ -41,6 +41,7 @@
 <script setup>
 import { useBookmarks } from 'src/stores/bookmarks-store';
 import { ref, onMounted } from 'vue'
+import { updateBookmarksContent } from '../functions/general-functions'
 
 const bookmarksStore = useBookmarks()
 
@@ -53,6 +54,7 @@ const applyGrid = () => {
     bookmarksStore.activeFolder.screens[+bookmarksStore.slide].rows = currentRows.value
     bookmarksStore.toggleShowGridDialog()
     emit('build-grid')
+    updateBookmarksContent()
 }
 
 onMounted(() => {

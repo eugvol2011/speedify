@@ -30,6 +30,7 @@ import { useQuasar } from 'quasar'
 import { useBookmarks } from '../stores/bookmarks-store'
 import { ref } from 'vue'
 import { validateChromeBookmarks } from '../functions/general-functions'
+import { updateBookmarksContent } from '../functions/general-functions'
 
 const q = useQuasar()
 const bookmarksStore = useBookmarks()
@@ -37,6 +38,8 @@ const bookmarkHtmlString = ref(null)
 const importFile = ref(null)
 const embedYoutube = ref(false)
 const newTab = ref(false)
+const importToItem = defineProps(['importTo'])
+const emit = defineEmits(['build-grid'])
 
 function embed(href) {
   if (href) {
@@ -138,13 +141,17 @@ function processFile() {
           if (node.tagName === 'DT') {
             const parsedNode = parseNode(node.firstElementChild)
             if (parsedNode) {
+              parsedNode.x = importToItem.importTo.x
+              parsedNode.y = importToItem.importTo.y
               bookmarksStore.addToRootNodeChildren(parsedNode);
+              emit('build-grid')
             }
           }
         }
       }
 
       console.log(bookmarksStore.rootNode)
+      updateBookmarksContent()
     }
     else {
       q.notify({

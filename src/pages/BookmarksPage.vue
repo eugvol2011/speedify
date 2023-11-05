@@ -47,11 +47,12 @@
               drag-allow-from=".vue-draggable-handle"
               drag-ignore-from=".no-drag"
             >
-              <!--FODLER & BOOKMARK-->
+              <!--FODLER & BOOKMARK & NOTE-->
               <div
                 v-if="screen.children[item.i] &&
                       (screen.children[item.i].type === 'bookmark' ||
-                      screen.children[item.i].type === 'folder')"
+                      screen.children[item.i].type === 'folder' ||
+                      screen.children[item.i].type === 'note')"
 
 
                 :class="screen.children[item.i].type"
@@ -93,7 +94,7 @@
                         >
                       </q-item>
                       <q-item clickable>
-                        <q-item-section>Move</q-item-section>
+                        <q-item-section @click="handleCutClick(screen.children, item.i)">Cut</q-item-section>
                       </q-item>
                       <q-item clickable>
                         <q-item-section
@@ -109,22 +110,40 @@
                 v-if="screen.children[item.i] === undefined && hoverIndex === item.i"
                 style="width: 100%; height:100%; display: flex; flex-direction: row; justify-content: center; align-items: center;"
               >
+               <img
+                 :src="bookmarksStore.defaultFolderIcon"
+                 @click="callEditFolder(null, item)"
+                 class="no-drag"
+                 alt="newFolderIcon"
+                 style="width: 25%; height: 25%"
+               />
                 <img
-                  class="no-drag"
-                  :src="bookmarksStore.defaultFolderIcon"
-                  alt="newFolderIcon"
-                  style="width: 25%; height: 25%"
-                />
-                <img
-                  class="no-drag"
                   :src="bookmarksStore.defaultBookmarkIcon"
+                  @click="callEditBookmark(null, item)"
+                  class="no-drag"
                   alt="newBookmarkIcon"
                   style="width: 25%; height: 25%"
                 />
                 <img
-                  class="no-drag"
                   :src="bookmarksStore.defaultNoteIcon"
+                  @click="callEditNote(null, item)"
+                  class="no-drag"
                   alt="newNoteIcon"
+                  style="width: 25%; height: 25%"
+                />
+                <img
+                  class="no-drag"
+                  @click="openImportDialog(item)"
+                  :src="bookmarksStore.defaultImportIcon"
+                  alt="importIcon"
+                  style="width: 25%; height: 25%"
+                />
+                <img
+                  v-if="cutItem"
+                  class="no-drag"
+                  @click="paste(item)"
+                  :src="bookmarksStore.defaultPasteIcon"
+                  alt="pasteIcon"
                   style="width: 25%; height: 25%"
                 />
               </div>
@@ -147,13 +166,6 @@
         rounded
       />
       <q-btn
-        @click="bookmarksStore.toggleShowImportDialog()"
-        class="glossy"
-        color="primary"
-        label="Import"
-        rounded
-      />
-      <q-btn
         v-if="bookmarksStore.activeFolder !== bookmarksStore.rootNode"
         @click="navigateUp"
         color="secondary"
@@ -171,14 +183,25 @@
       </q-breadcrumbs>
     </div>
 
-    <ImportDialog />
+    <ImportDialog
+      :importTo="importToItem"
+      @build-grid="buildGrid()"
+    />
 
     <GridDialog
       v-if="bookmarksStore.showGridDialog"
       @build-grid="buildGrid()"
     />
 
-    <EditBookmarkDialog ref="editBookmarkDialogRef" />
+    <EditBookmarkDialog ref="editBookmarkDialogRef"
+      @build-grid="buildGrid()"
+    />
+    <EditFolderDialog ref="editFolderDialogRef"
+      @build-grid="buildGrid()"
+    />
+    <EditNoteDialog ref="editNoteDialogRef"
+      @build-grid="buildGrid()"
+    />
   </div>
 </template>
 
@@ -186,10 +209,13 @@
 import ImportDialog from '../components/ImportDialog.vue'
 import GridDialog from '../components/GridDialog.vue'
 import EditBookmarkDialog from '../components/EditBookmarkDialog.vue'
+import EditFolderDialog from '../components/EditFolderDialog.vue'
+import EditNoteDialog from '../components/EditNoteDialog.vue'
 
-import { ref, computed, reactive, watch, onMounted} from 'vue'
+import { ref, computed, reactive, watch, onMounted, onUpdated, onBeforeMount} from 'vue'
 import { useGeneral } from '../stores/general-store'
 import { useBookmarks } from '../stores/bookmarks-store'
+import { updateBookmarksContent } from '../functions/general-functions'
 
 
 import { GridLayout, GridItem } from 'grid-layout-plus'
@@ -200,6 +226,8 @@ import { GridLayout, GridItem } from 'grid-layout-plus'
 const store = useGeneral()
 const bookmarksStore = useBookmarks()
 const editBookmarkDialogRef = ref(null)
+const editFolderDialogRef = ref(null)
+const editNoteDialogRef = ref(null)
 const hoverIndex = ref(null)
 const hover = (i) => {
   if (showItemMenu.value===false) {
@@ -207,14 +235,27 @@ const hover = (i) => {
   }
 }
 const showItemMenu = ref(false)
+const importToItem = ref(null)
+const cutItem = ref(null)
 
 
-const callEditBookmark = (bookmark) => {
+const callEditBookmark = (bookmark, layoutItem = null) => {
   if (editBookmarkDialogRef.value) {
-    editBookmarkDialogRef.value.editBookmark(bookmark)
+    editBookmarkDialogRef.value.editBookmark(bookmark, layoutItem)
   }
 }
 
+const callEditFolder = (folder, layoutItem = null) => {
+  if (editFolderDialogRef.value) {
+    editFolderDialogRef.value.editFolder(folder, layoutItem)
+  }
+}
+
+const callEditNote = (note, layoutItem = null) => {
+  if (editNoteDialogRef.value) {
+    editNoteDialogRef.value.editNote(note, layoutItem)
+  }
+}
 
 const bookmarksContainer = ref(null)
 const bookmarksPageWrapper = ref(null)
@@ -237,16 +278,18 @@ function buildGrid() {
     }
   }
   fillGrid(layout, bookmarksStore.activeFolder.screens[+bookmarksStore.slide].cols, bookmarksStore.activeFolder.screens[+bookmarksStore.slide].rows)
-  console.log('Layout:', layout)
+  console.log('Layout from buildGrid:', layout)
 }
 
-onMounted(() => {
+
+onBeforeMount(async() => {
+  await bookmarksStore.fetchBookmarksContent()
   buildGrid()
 })
 
 
 const remove = (array, index) => {
-  array[index] = bookmarksStore.createBookmarkObject(
+  /*array[index] = bookmarksStore.createBookmarkObject(
     "removed",
     "removed",
     "",
@@ -260,8 +303,11 @@ const remove = (array, index) => {
     array[index].y,
     1,
     1
-  )
+  )*/
+  array.splice(index, 1)
+  buildGrid()
   showItemMenu.value = false
+  updateBookmarksContent()
 }
 
 const moved = (screenIndex) => {
@@ -272,6 +318,7 @@ const moved = (screenIndex) => {
     }
   })
   console.log(layout)
+  updateBookmarksContent()
 }
 
 
@@ -355,6 +402,8 @@ const handleItemClick = (item, event) => {
         navigateToFolder(item)
       } else if (item.type === 'bookmark') {
         openUrl(item)
+      } else if (item.type === 'note') {
+        handleEditClick(item)
       }
     } else {
       console.log('EMPTY CLICKED')
@@ -365,7 +414,30 @@ const handleItemClick = (item, event) => {
 const handleEditClick = (item) => {
   if (item.type === 'bookmark') {
     callEditBookmark(item)
+  } else if (item.type === 'folder') {
+    callEditFolder(item)
+  } else if (item.type === 'note') {
+    callEditNote(item)
   }
+}
+
+const handleCutClick = (array, index) => {
+  cutItem.value = { ...array[index]}
+  remove(array, index)
+}
+
+const paste = (item) => {
+  cutItem.value.x = item.x
+  cutItem.value.y = item.y
+  bookmarksStore.activeFolder.screens[+bookmarksStore.slide].children.push(cutItem.value)
+  buildGrid()
+  cutItem.value = null
+  updateBookmarksContent()
+}
+
+const openImportDialog = (item) => {
+  importToItem.value = item
+  bookmarksStore.toggleShowImportDialog()
 }
 
 </script>
