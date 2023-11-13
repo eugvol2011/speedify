@@ -12,7 +12,8 @@
     <q-page-container class="container" @dblclick="onDblClick">
       <q-img :src="store.currentBackgroundImage !== undefined ? store.currentBackgroundImage : ''" spinner-color="white"
         style="position: absolute; top:0px; left:0px; width: 100%; height: 100%; z-index: -2;" class="background-image" />
-      <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
+      <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer"
+        style="color: white;background-color: rgba(0, 0, 0, 0.5);" />
       <router-view />
       <BgModal v-if="store.showBgModal" />
     </q-page-container>
@@ -23,13 +24,12 @@
 import { useGeneral } from '../stores/general-store'
 import EssentialLink from 'components/EssentialLink.vue'
 import BgModal from 'components/BgModal.vue'
-import { ref, onBeforeMount } from 'vue'
+import { ref, onBeforeMount, inject } from 'vue'
 import { auth } from 'boot/firebase'
 import { useRouter } from 'vue-router'
-import { useBookmarks } from '../stores/bookmarks-store'
 
+const $unicornLog = inject('$unicornLog')
 const store = useGeneral()
-const bookmarksStore = useBookmarks()
 const router = useRouter()
 
 const linksList = [
@@ -67,10 +67,28 @@ const onDblClick = (event) => {
 }
 
 onBeforeMount(async () => {
+  $unicornLog({
+    text: 'onBeforeMount called',
+    disabled: store.logsOff,
+    logPrefix: '[MainLayout.vue]',
+    styles: ['color: blue']
+  })
   if (!auth.currentUser) {
+    $unicornLog({
+      text: 'No user logged in, redirecting to SignInPage',
+      disabled: store.logsOff,
+      logPrefix: '[MainLayout.vue]',
+      styles: ['color: blue']
+    })
     router.push({ name: 'SignInPage' })
   } else {
     await store.fetchBackgroundImage()
+    $unicornLog({
+      text: `Fetched backgroundImage:\n ${store.currentBackgroundImage}`,
+      disabled: store.logsOff,
+      logPrefix: '[MainLayout.vue]',
+      styles: ['color: green']
+    })
   }
 })
 </script>

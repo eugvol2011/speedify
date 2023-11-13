@@ -21,24 +21,11 @@
           </q-input>
 
           <div class="q-gutter-sm column">
-            <div class="row">
-              <q-radio v-model="iconModel" checked-icon="task_alt" unchecked-icon="panorama_fish_eye"
-                val="faviconkit_icon" label="" style="width: 7%;" />
-              <q-input rounded outlined dense v-model="tempBookmark.faviconkit_icon" label="Faviconkit icon"
-                style="width: 93%;" />
-            </div>
-            <div class="row">
-              <q-radio v-model="iconModel" checked-icon="task_alt" unchecked-icon="panorama_fish_eye" val="google_icon"
-                label="" style="width: 7%;" />
-              <q-input rounded outlined dense v-model="tempBookmark.google_icon" label="Google icon"
-                style="width: 93%;" />
-            </div>
-            <div class="row">
-              <q-radio v-model="iconModel" checked-icon="task_alt" unchecked-icon="panorama_fish_eye" val="original_icon"
-                label="" style="width: 7%;" />
-              <q-input rounded outlined dense v-model="tempBookmark.original_icon" label="Original icon"
-                style="width: 93%;" />
-            </div>
+            <q-btn unelevated rounded color="yellow" label="Default icon" @click="changeIcon('default')" />
+            <q-btn unelevated rounded color="yellow" label="Original icon" @click="changeIcon('original')" />
+            <q-btn unelevated rounded color="yellow" label="Faviconkit icon" @click="changeIcon('faviconkit')" />
+            <q-btn unelevated rounded color="yellow" label="Google icon" @click="changeIcon('google')" />
+            <q-btn unelevated rounded color="yellow" label="Allesedv icon" @click="changeIcon('allesedv')" />
 
             <div class="row justify-center" style="width: 100%;">
               <img :src="tempBookmark.icon" alt="icon" style="width:200px;height:200px;" />
@@ -60,15 +47,12 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useBookmarks } from '../stores/bookmarks-store'
-import { updateBookmarksContent } from '../functions/general-functions'
 
 const bookmarksStore = useBookmarks()
 const emit = defineEmits(['build-grid'])
 const tempBookmark = ref({
   name: '',
   type: 'bookmark',
-  faviconkit_icon: '',
-  google_icon: '',
   original_icon: '',
   icon: '',
   url: '',
@@ -82,8 +66,6 @@ const tempBookmark = ref({
 const currentBookmark = ref({
   name: '',
   type: 'bookmark',
-  faviconkit_icon: '',
-  google_icon: '',
   original_icon: '',
   icon: '',
   url: '',
@@ -97,11 +79,25 @@ const currentBookmark = ref({
 
 const newItem = ref(null)
 
-const iconModel = ref('faviconkit_icon')
-watch(iconModel, () => {
-  tempBookmark.value.icon = tempBookmark.value[iconModel.value]
-})
-
+const changeIcon = (type) => {
+  switch (type) {
+    case 'default':
+      tempBookmark.value.icon = bookmarksStore.defaultBookmarkIcon
+      break
+    case 'original':
+      tempBookmark.value.icon = tempBookmark.value.original_icon
+      break
+    case 'faviconkit':
+      tempBookmark.value.icon = bookmarksStore.getFaviconkitIcon(tempBookmark.value.url)
+      break
+    case 'google':
+      tempBookmark.value.icon = bookmarksStore.getGoogleIcon(tempBookmark.value.url)
+      break
+    case 'allesedv':
+      tempBookmark.value.icon = bookmarksStore.getAllesedvIcon(tempBookmark.value.url)
+      break
+  }
+}
 
 const applyEditBookmarkDialog = () => {
   bookmarksStore.toggleShowEditBookmarkDialog()
@@ -116,7 +112,7 @@ const applyEditBookmarkDialog = () => {
     emit('build-grid')
     newItem.value = null
   }
-  updateBookmarksContent()
+  bookmarksStore.updateBookmarksContent()
 }
 
 const editBookmark = (bookmark, layoutItem = null) => {
@@ -125,22 +121,20 @@ const editBookmark = (bookmark, layoutItem = null) => {
     bookmarksStore.toggleShowEditBookmarkDialog()
     currentBookmark.value = bookmark
   } else {
-    tempBookmark.value = bookmarksStore.createBookmarkObject(
-      'bookmark',
-      'New Bookmark',
-      bookmarksStore.defaultBookmarkIcon,
-      'https://marvellous-sapphire-chipmunk.faviconkit.com/host/256',
-      'https://www.google.com/s2/favicons?domain=host&sz=256',
-      bookmarksStore.defaultBookmarkIcon,
-      '',
-      '',
-      false,
-      0,
-      0,
-      1,
-      1
-    )
-    console.log(tempBookmark.value)
+    tempBookmark.value = {
+      type: 'bookmark',
+      name: 'New Bookmark',
+
+      original_icon: bookmarksStore.defaultBookmarkIcon,
+      icon: bookmarksStore.defaultBookmarkIcon,
+      url: 'https://',
+      embed: '',
+      newtab: true,
+      x: 0,
+      y: 0,
+      w: 1,
+      h: 1,
+    }
     newItem.value = layoutItem
     bookmarksStore.toggleShowEditBookmarkDialog()
   }

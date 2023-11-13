@@ -63,13 +63,15 @@
 import { ref } from 'vue'
 import { auth, db } from 'boot/firebase'
 import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect } from 'firebase/auth'
 import { useRouter } from 'vue-router'
 import { collection, addDoc } from 'firebase/firestore'
 import { doc, setDoc } from "firebase/firestore"
+import { useGeneral } from '../stores/general-store'
 import { useBookmarks } from '../stores/bookmarks-store'
 
 const bookmarksStore = useBookmarks()
+const store = useGeneral()
 
 const router = useRouter()
 
@@ -78,30 +80,32 @@ const password = ref('')
 const confirmPassword = ref('')
 const visibility = ref(false)
 
-const createUserInDB = async() => {
-  try {
-    const userEmail = auth.currentUser?.email;
+const createUserInDB = async () => {
+      try {
+        const userEmail = auth.currentUser?.email;
 
-    if (!userEmail) {
-      throw new Error("User not authenticated");
+        if (!userEmail) {
+          throw new Error("User not authenticated");
+        }
+
+        const userDocRef = doc(db, "users", userEmail);  // using email as the doc ID
+        const dataToAdd = {
+          name: "",
+          email: auth.currentUser?.email,
+          backgroundImage: "https://images.unsplash.com/photo-1618856921788-9bc0b6ff8ca2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w0OTYwMDF8MHwxfHJhbmRvbXx8fHx8fHx8fDE2OTk4NzUyNDV8&ixlib=rb-4.0.3&q=85",
+          avatarPicture: "",
+          bookmarksContent: JSON.stringify(bookmarksStore.rootNode),
+          folderIcons: [bookmarksStore.defaultFolderIcon]
+        };
+
+        await setDoc(userDocRef, dataToAdd);  // setDoc will create or overwrite the document
+
+        console.log("Document written/updated for user:", userEmail);
+      } catch (e) {
+        console.error("Error adding/updating document: ", e);
+      }
     }
 
-    const userDocRef = doc(db, "users", userEmail);  // using email as the doc ID
-    const dataToAdd = {
-      name: "",
-      email: auth.currentUser?.email,
-      backgroundImage: "",
-      avatarPicture: "",
-      bookmarksContent: JSON.stringify(bookmarksStore.rootNode)
-    };
-
-    await setDoc(userDocRef, dataToAdd);  // setDoc will create or overwrite the document
-
-    console.log("Document written/updated for user:", userEmail);
-  } catch (e) {
-    console.error("Error adding/updating document: ", e);
-  }
-}
 
 //SIGN UP WITH E-MAIL AND PASSWORD
 const onSubmit = async () => {
@@ -120,8 +124,16 @@ const signInWithGoogle = async () => {
   const provider = new GoogleAuthProvider()
 
   try {
-    await signInWithPopup(auth, provider)
-    await createUserInDB()
+    const result = await signInWithPopup(auth, provider)
+    const isNewUser = result._tokenResponse?.isNewUser;
+    if (isNewUser) {
+      // The user is signing up
+      console.log('User signed up');
+      await createUserInDB();
+    } else {
+      // The user is signing in
+      console.log('User signed in');
+    }
     router.push({ name: 'Main' })
   } catch (error) {
     console.error('Error signing in with Google:', error.message)

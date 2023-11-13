@@ -22,7 +22,6 @@
 <script setup>
 import { ref, watch, onMounted, shallowRef } from 'vue'
 import { useBookmarks } from '../stores/bookmarks-store'
-import { updateBookmarksContent } from '../functions/general-functions'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/monokai-sublime.min.css'
 import { Quill, QuillEditor } from '@vueup/vue-quill'
@@ -32,6 +31,7 @@ import MagicUrl from 'quill-magic-url'
 
 Quill.register('modules/blotFormatter', BlotFormatter);
 Quill.register('modules/magicUrl', MagicUrl);
+Quill.debug('error')
 
 
 
@@ -110,7 +110,7 @@ const saveNote = () => {
     emit('build-grid')
     newItem.value = null
   }
-  updateBookmarksContent()
+  bookmarksStore.updateBookmarksContent()
 }
 
 const editNote = (note, layoutItem = null) => {

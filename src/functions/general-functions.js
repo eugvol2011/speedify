@@ -1,8 +1,8 @@
 import { auth, db } from 'boot/firebase'
 import { doc, updateDoc } from "firebase/firestore"
-import { useBookmarks } from '../stores/bookmarks-store'
+//import { useBookmarks } from '../stores/bookmarks-store'
 
-const bookmarksStore = useBookmarks()
+//const bookmarksStore = useBookmarks()
 
 export function validateChromeBookmarks(htmlString) {
   const parser = new DOMParser();
@@ -38,17 +38,3 @@ export function validateChromeBookmarks(htmlString) {
   return true;
 }
 
-export async function updateBookmarksContent () {
-  if (auth.currentUser && auth.currentUser.email && bookmarksStore.rootNode) {
-    const userDoc = doc(db, "users", auth.currentUser?.email)
-    console.log('for update', bookmarksStore.rootNode)
-    try {
-      await updateDoc(userDoc, {
-        bookmarksContent: JSON.stringify(bookmarksStore.rootNode)
-      })
-      console.log("Bookmarks content successfully updated!");
-    } catch (e) {
-      console.error("Error updating document: ", e);
-    }
-  }
-}

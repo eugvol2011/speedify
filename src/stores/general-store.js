@@ -5,6 +5,7 @@ import { getDocs, query, where, collection } from 'firebase/firestore'
 export const useGeneral = defineStore({
   id: 'general',
   state: () => ({
+    logsOff: false,
     backgroundImages: [],
     currentBackgroundImage: "",
     activeIndex: 0,
@@ -28,7 +29,6 @@ export const useGeneral = defineStore({
       this.showBgModal = !this.showBgModal
     },
     async fetchBackgroundImage() {
-      // Define the query for the current user's background image
       const q = query(collection(db, "users"), where("email", "==", auth.currentUser?.email))
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
@@ -38,6 +38,7 @@ export const useGeneral = defineStore({
       } else {
         this.currentBackgroundImage = "";
       }
-    }
+    },
+
   },
 });

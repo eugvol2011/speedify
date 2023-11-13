@@ -30,14 +30,13 @@ import { useQuasar } from 'quasar'
 import { useBookmarks } from '../stores/bookmarks-store'
 import { ref } from 'vue'
 import { validateChromeBookmarks } from '../functions/general-functions'
-import { updateBookmarksContent } from '../functions/general-functions'
 
 const q = useQuasar()
 const bookmarksStore = useBookmarks()
 const bookmarkHtmlString = ref(null)
 const importFile = ref(null)
 const embedYoutube = ref(false)
-const newTab = ref(false)
+const newTab = ref(true)
 const importToItem = defineProps(['importTo'])
 const emit = defineEmits(['build-grid'])
 
@@ -52,7 +51,6 @@ function embed(href) {
   }
   return ''
 }
-
 
 function parseNode(node) {
   if (node.tagName === 'H3') {
@@ -100,21 +98,19 @@ function parseNode(node) {
       y: 0,
     };
   } else if (node.tagName === 'A') {
-    return bookmarksStore.createBookmarkObject(
-      "bookmark",
-      node.textContent,
-      node.getAttribute('ICON'),
-      `https://marvellous-sapphire-chipmunk.faviconkit.com/${(new URL(node.getAttribute('HREF')).host)}/256`,
-      `https://www.google.com/s2/favicons?domain=${(new URL(node.getAttribute('HREF')).host)}&sz=256`,
-      `https://marvellous-sapphire-chipmunk.faviconkit.com/${(new URL(node.getAttribute('HREF')).host)}/256`,
-      node.getAttribute('HREF'),
-      embed(node.getAttribute('HREF')),
-      newTab.value,
-      0,
-      0,
-      1,
-      1,
-    )
+    return {
+      type: 'bookmark',
+      name: node.textContent,
+      original_icon: !node.getAttribute('ICON') ? bookmarksStore.defaultBookmarkIcon : node.getAttribute('ICON'),
+      icon: bookmarksStore.getFaviconkitIcon(node.getAttribute('HREF')),
+      url: node.getAttribute('HREF'),
+      embed: node.getAttribute('HREF'),
+      newtab: newTab.value,
+      x: 0,
+      y: 0,
+      w: 1,
+      h: 1
+    }
   }
   return undefined;
 }
@@ -151,7 +147,7 @@ function processFile() {
       }
 
       console.log(bookmarksStore.rootNode)
-      updateBookmarksContent()
+      bookmarksStore.updateBookmarksContent()
     }
     else {
       q.notify({

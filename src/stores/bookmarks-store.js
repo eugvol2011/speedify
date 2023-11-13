@@ -1,67 +1,83 @@
 import { defineStore } from 'pinia'
 import { auth, db } from '../boot/firebase'
-import { getDocs, query, where, collection } from 'firebase/firestore'
+import { getDocs, query, where, collection, doc, updateDoc } from 'firebase/firestore'
 
-const defaultCols = 5
-const defaultRows = 5
-const defaultMargin = 10
-const defaultFolderIcon = "../folder.svg"
-const defaultBookmarkIcon = "../bookmark.svg"
-const defaultNoteIcon = "../note.svg"
-const defaultImportIcon = "../import.svg"
-const defaultPasteIcon = "../paste.svg"
+function getInitialState() {
+  const defaultCols = 5;
+  const defaultRows = 5;
+  const defaultMargin = 15;
+  const defaultFolderIcon = "../folder.svg";
+  const defaultBookmarkIcon = "../bookmark.svg";
+  const defaultNoteIcon = "../note.svg";
+  const defaultImportIcon = "../import.svg";
+  const folderIcons = []
 
-const rootNode = {
-  type: "folder",
-  name: "root",
-  icon: defaultFolderIcon,
-  screens: [
-    {
-      cols: defaultCols,
-      rows: defaultRows,
-      margin: defaultMargin,
-      children: []
-    }
-  ],
-  x: 0,
-  y: 0,
+  const rootNode = {
+    type: "folder",
+    name: "root",
+    icon: defaultFolderIcon,
+    screens: [
+      {
+        cols: defaultCols,
+        rows: defaultRows,
+        margin: defaultMargin,
+        children: []
+      }
+    ],
+    x: 0,
+    y: 0,
+  };
+
+  return {
+    defaultCols,
+    defaultRows,
+    defaultMargin,
+    defaultFolderIcon,
+    defaultBookmarkIcon,
+    defaultNoteIcon,
+    defaultImportIcon,
+    showImportDialog: false,
+    showGridDialog: false,
+    showEditBookmarkDialog: false,
+    showEditFolderDialog: false,
+    showEditNoteDialog: false,
+    rootNode,
+    activeFolder: rootNode,
+    breadCrumbs: [rootNode],
+    slide: "0",
+    folderIcons,
+  };
 }
 
 
 export const useBookmarks = defineStore({
   id: 'bookmarks',
-  state: () => ({
-    showImportDialog: false,
-    rootNode: rootNode,
-    defaultCols: defaultCols,
-    defaultRows: defaultRows,
-    defaultMargin: defaultMargin,
-    defaultFolderIcon: defaultFolderIcon,
-    defaultBookmarkIcon: defaultBookmarkIcon,
-    defaultNoteIcon: defaultNoteIcon,
-    defaultImportIcon: defaultImportIcon,
-    defaultPasteIcon: defaultPasteIcon,
-    showGridDialog: false,
-    activeFolder: rootNode,
-    showEditBookmarkDialog: false,
-    showEditFolderDialog: false,
-    showEditNoteDialog: false,
-    slide: "0",
-    breadCrumbs: [rootNode]
-  }),
+  state: () => getInitialState(),
   getters: {
     //doubleCount: (state) => state.counter * 2,
   },
   actions: {
+    reset() {
+      console.log('reset')
+      Object.assign(this, getInitialState());
+    },
     toggleShowImportDialog() {
       this.showImportDialog = !this.showImportDialog
     },
-    addToRootNodeChildren(node) {
-      //this.rootNode.screens[0].children.push(node)
-      this.activeFolder.screens[+this.slide].children.push(node)
-    },
     toggleShowGridDialog() {
       this.showGridDialog = !this.showGridDialog
+    },
+    toggleShowEditBookmarkDialog() {
+      this.showEditBookmarkDialog = !this.showEditBookmarkDialog
+    },
+    toggleShowEditFolderDialog() {
+      this.showEditFolderDialog = !this.showEditFolderDialog
+    },
+    toggleShowEditNoteDialog() {
+      this.showEditNoteDialog = !this.showEditNoteDialog
+    },
+    addToRootNodeChildren(node) {
+      this.activeFolder.screens[+this.slide].children.push(node)
     },
     setActiveFolder(folder) {
       this.slide = "0"
@@ -74,84 +90,81 @@ export const useBookmarks = defineStore({
         this.breadCrumbs.push(this.activeFolder)
       }
     },
-    toggleShowEditBookmarkDialog() {
-      this.showEditBookmarkDialog = !this.showEditBookmarkDialog
-    },
-    toggleShowEditFolderDialog() {
-      this.showEditFolderDialog = !this.showEditFolderDialog
-    },
-    toggleShowEditNoteDialog() {
-      this.showEditNoteDialog = !this.showEditNoteDialog
-    },
-    createBookmarkObject(
-      type,
-      name,
-      original_icon,
-      faviconkit_icon,
-      google_icon,
-      icon,
-      url,
-      embed,
-      newtab,
-      x,
-      y,
-      w,
-      h
-    ) {
-      return {
-        type: type,
-        name: name,
-        original_icon: original_icon,
-        faviconkit_icon: faviconkit_icon,
-        google_icon: google_icon,
-        icon: icon,
-        url: url,
-        embed: embed,
-        newtab: newtab,
-        x: x,
-        y: y,
-        w: w,
-        h: h
+    getFaviconkitIcon(stringUrl) {
+      if (stringUrl && stringUrl !== '') {
+        return `https://marvellous-sapphire-chipmunk.faviconkit.com/${(new URL(stringUrl).host)}/256`
+      } else {
+        return this.defaultBookmarkIcon
       }
     },
-    createFolderObject(
-      type,
-      name,
-      icon,
-      cols,
-      rows,
-      margin
-    ) {
-      return {
-        type: type,
-        name: name,
-        icon: icon,
-        screens: [
-          {
-            cols: cols,
-            rows: rows,
-            margin: margin,
-            children: []
-          }
-        ],
-        x: 0,
-        y: 0,
+    getGoogleIcon(stringUrl) {
+      if (stringUrl && stringUrl !== '') {
+        return `https://www.google.com/s2/favicons?domain=${(new URL(stringUrl).host)}&sz=256`
+      } else {
+        return this.defaultBookmarkIcon
+      }
+    },
+    getAllesedvIcon(stringUrl) {
+      if (stringUrl && stringUrl !== '') {
+        return `https://f1.allesedv.com/256/${(new URL(stringUrl).host)}`
+      } else {
+        return this.defaultBookmarkIcon
       }
     },
     async fetchBookmarksContent() {
-      // Define the query for the current user's background image
-      const q = query(collection(db, "users"), where("email", "==", auth.currentUser?.email))
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        // Assuming each user has only one document, we'll use the first document in the result.
-        const docData = querySnapshot.docs[0].data();
-        this.rootNode = JSON.parse(docData.bookmarksContent) || "";
-        this.activeFolder = this.rootNode
-        this.breadCrumbs = [this.rootNode]
-        console.log('FETCHED ROOT NODE', this.rootNode)
-      } else {
-        this.bookmarksContent = "";
+      if (auth.currentUser && auth.currentUser.email) {
+        const q = query(collection(db, "users"), where("email", "==", auth.currentUser?.email))
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          // Assuming each user has only one document, we'll use the first document in the result.
+          const docData = querySnapshot.docs[0].data();
+          this.rootNode = JSON.parse(docData.bookmarksContent) || "";
+          this.activeFolder = this.rootNode
+          this.breadCrumbs = [this.rootNode]
+        } else {
+          this.bookmarksContent = "";
+        }
       }
-    }
-  },
+    },
+    async updateBookmarksContent() {
+      if (auth.currentUser && auth.currentUser.email && this.rootNode) {
+        const userDoc = doc(db, "users", auth.currentUser?.email)
+        console.log('for update', this.rootNode)
+        try {
+          await updateDoc(userDoc, {
+            bookmarksContent: JSON.stringify(this.rootNode)
+          })
+          console.log("Bookmarks content successfully updated!");
+        } catch (e) {
+          console.error("Error updating document: ", e);
+        }
+      }
+    },
+    async fetchFolderIcons() {
+      if (auth.currentUser && auth.currentUser.email) {
+        const q = query(collection(db, "users"), where("email", "==", auth.currentUser?.email))
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          // Assuming each user has only one document, we'll use the first document in the result.
+          const docData = querySnapshot.docs[0].data();
+          this.folderIcons = docData.folderIcons || [];
+        } else {
+          this.folderIcons = [];
+        }
+      }
+    },
+    async updateFolderIcons() {
+      if (auth.currentUser && auth.currentUser.email && this.folderIcons) {
+        const userDoc = doc(db, "users", auth.currentUser?.email)
+        try {
+          await updateDoc(userDoc, {
+            folderIcons: this.folderIcons
+          })
+          console.log("Folder icons successfully updated!");
+        } catch (e) {
+          console.error("Error updating document: ", e);
+        }
+      }
+    },
+  }
 });

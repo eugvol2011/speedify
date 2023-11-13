@@ -28,6 +28,7 @@
             v-model:layout="layout"
             :col-num="screen.cols"
             :is-bounded="true"
+            :is-resizable="false"
             :margin="[bookmarksStore.defaultMargin, bookmarksStore.defaultMargin]"
             :max-rows="screen.rows"
             :row-height="bookmarksContainer.offsetHeight / screen.rows - screen.margin - screen.margin / screen.rows"
@@ -49,6 +50,47 @@
             >
               <!--FODLER & BOOKMARK & NOTE-->
               <div
+                :style="{width: '100%', height: '15%', display: 'flex', 'align-items': 'center', 'justify-content': screen.children[item.i] ? 'space-around':'end'}">
+                <div style="width:75%; display: flex; align-items: center; justify-content: space-evenly;">
+                  <q-icon
+                    v-if="screen.children[item.i] && hoverIndex === item.i"
+                    name="edit"
+                    class="tool-btn"
+                    size="xs"
+                    @click="handleEditClick(screen.children[item.i])"
+                  />
+                  <q-icon
+                    v-if="screen.children[item.i] && hoverIndex === item.i"
+                    name="content_cut"
+                    class="tool-btn"
+                    size="xs"
+                    @click="handleCutClick(screen.children, item.i)"
+                  />
+                  <q-icon
+                    v-if="screen.children[item.i] && hoverIndex === item.i"
+                    name="delete"
+                    class="tool-btn"
+                    size="xs"
+                    @click="remove(screen.children, item.i)"
+                  />
+                  <q-icon
+                    v-if="!screen.children[item.i] && cutItem && hoverIndex === item.i"
+                    @click="paste(item)"
+                    class="tool-btn"
+                    name="content_paste"
+                    size="xs"
+                  />
+                </div>
+                <div style="width: 15%; display:flex; justify-content: center; align-items: center;">
+                  <q-icon
+                    v-if="hoverIndex === item.i"
+                    class="vue-draggable-handle"
+                    name="more_horiz"
+                    size="xs"
+                  />
+                </div>
+              </div>
+              <div
                 v-if="screen.children[item.i] &&
                       (screen.children[item.i].type === 'bookmark' ||
                       screen.children[item.i].type === 'folder' ||
@@ -56,7 +98,7 @@
 
 
                 :class="screen.children[item.i].type"
-                style="width: 100%; height:100%; display: flex; flex-direction: column; justify-content: center; align-items: center;"
+                style="width: 100%; height:75%; display: flex; flex-direction: column; justify-content: space-evenly; align-items:center;"
               >
                 <img
                   class="no-drag"
@@ -66,49 +108,16 @@
                 />
                 <span
                   class="no-drag"
-                  :style="hoverIndex === item.i ?
-                  { 'background-color': 'transparent' } :
-                  { 'background-color': 'rgba(0, 0, 0, 0.5)', 'border-radius': '10%'}">
+                  style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; text-align: center; text-shadow: 2px 2px 2px rgba(0,0,0,0.5); width: 100%; line-height: 1.2em; height: 2.4em;"
+                >
                   {{ screen.children[item.i].name }}
                 </span>
-                <q-icon
-                  v-if="hoverIndex === item.i"
-                  class="vue-draggable-handle"
-                  name="more_vert"
-                  size="md"
-                  style="position: absolute; top: 0; right: 0;"
-                >
-                  <q-menu
-                    v-model="showItemMenu"
-                    transition-hide="scale"
-                    transition-show="scale"
-                    auto-close
-                    fit
-                    context-menu
-                    class="bg-black text-white"
-                  >
-                    <q-list dense>
-                      <q-item clickable>
-                        <q-item-section
-                          @click="handleEditClick(screen.children[item.i])">Edit</q-item-section
-                        >
-                      </q-item>
-                      <q-item clickable>
-                        <q-item-section @click="handleCutClick(screen.children, item.i)">Cut</q-item-section>
-                      </q-item>
-                      <q-item clickable>
-                        <q-item-section
-                          @click="remove(screen.children, item.i)">Remove</q-item-section
-                        >
-                      </q-item>
-                    </q-list>
-                  </q-menu>
-                </q-icon>
+
               </div>
               <!--EMPTY ITEM-->
               <div
                 v-if="screen.children[item.i] === undefined && hoverIndex === item.i"
-                style="width: 100%; height:100%; display: flex; flex-direction: row; justify-content: center; align-items: center;"
+                style="width: 100%; height:75%; display: flex; flex-direction: row; justify-content: center; align-items: center;"
               >
                <img
                  :src="bookmarksStore.defaultFolderIcon"
@@ -136,14 +145,6 @@
                   @click="openImportDialog(item)"
                   :src="bookmarksStore.defaultImportIcon"
                   alt="importIcon"
-                  style="width: 25%; height: 25%"
-                />
-                <img
-                  v-if="cutItem"
-                  class="no-drag"
-                  @click="paste(item)"
-                  :src="bookmarksStore.defaultPasteIcon"
-                  alt="pasteIcon"
                   style="width: 25%; height: 25%"
                 />
               </div>
@@ -212,32 +213,34 @@ import EditBookmarkDialog from '../components/EditBookmarkDialog.vue'
 import EditFolderDialog from '../components/EditFolderDialog.vue'
 import EditNoteDialog from '../components/EditNoteDialog.vue'
 
-import { ref, computed, reactive, watch, onMounted, onUpdated, onBeforeMount} from 'vue'
+import { ref, reactive, onBeforeMount, inject} from 'vue'
 import { useGeneral } from '../stores/general-store'
 import { useBookmarks } from '../stores/bookmarks-store'
-import { updateBookmarksContent } from '../functions/general-functions'
-
 
 import { GridLayout, GridItem } from 'grid-layout-plus'
 
-
-
-
+const $unicornLog = inject('$unicornLog')
 const store = useGeneral()
 const bookmarksStore = useBookmarks()
+
+const bookmarksContainer = ref(null)
+const bookmarksPageWrapper = ref(null)
 const editBookmarkDialogRef = ref(null)
 const editFolderDialogRef = ref(null)
 const editNoteDialogRef = ref(null)
 const hoverIndex = ref(null)
+const showItemMenu = ref(false)
+const importToItem = ref(null)
+const cutItem = ref(null)
+const layout = reactive([])
+
+
+
 const hover = (i) => {
   if (showItemMenu.value===false) {
     hoverIndex.value = i
   }
 }
-const showItemMenu = ref(false)
-const importToItem = ref(null)
-const cutItem = ref(null)
-
 
 const callEditBookmark = (bookmark, layoutItem = null) => {
   if (editBookmarkDialogRef.value) {
@@ -257,12 +260,6 @@ const callEditNote = (note, layoutItem = null) => {
   }
 }
 
-const bookmarksContainer = ref(null)
-const bookmarksPageWrapper = ref(null)
-
-
-const layout = reactive([])
-
 function buildGrid() {
   layout.length = 0
   bookmarksStore.activeFolder.screens[+bookmarksStore.slide].children.forEach((item, index) => {
@@ -278,39 +275,51 @@ function buildGrid() {
     }
   }
   fillGrid(layout, bookmarksStore.activeFolder.screens[+bookmarksStore.slide].cols, bookmarksStore.activeFolder.screens[+bookmarksStore.slide].rows)
-  console.log('Layout from buildGrid:', layout)
+  $unicornLog({
+            text: `buildGrid called, layout:`,
+            disabled: store.logsOff,
+            logPrefix: '[BookmarksPage.vue]',
+            styles: 'color: green',
+            array: layout,
+          })
 }
 
 
 onBeforeMount(async() => {
+  $unicornLog({
+            text: 'onBeforeMount called',
+            disabled: store.logsOff,
+            logPrefix: '[BookmarksPage.vue]',
+            styles: ['color: blue']
+          })
   await bookmarksStore.fetchBookmarksContent()
+  $unicornLog({
+            text: 'Fetched bookmarksContent written to rootNode:',
+            disabled: store.logsOff,
+            objects: bookmarksStore.rootNode,
+            logPrefix: '[BookmarksPage.vue]',
+            styles: ['color: green']
+          })
+  await bookmarksStore.fetchFolderIcons()
+  $unicornLog({
+            text: 'Fetched folderIcons written to folderIcons:',
+            disabled: store.logsOff,
+            array: bookmarksStore.folderIcons,
+            logPrefix: '[BookmarksPage.vue]',
+            styles: ['color: green']
+          })
   buildGrid()
 })
 
 
-const remove = (array, index) => {
-  /*array[index] = bookmarksStore.createBookmarkObject(
-    "removed",
-    "removed",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    false,
-    array[index].x,
-    array[index].y,
-    1,
-    1
-  )*/
+const remove = async (array, index) => {
   array.splice(index, 1)
   buildGrid()
   showItemMenu.value = false
-  updateBookmarksContent()
+  await bookmarksStore.updateBookmarksContent()
 }
 
-const moved = (screenIndex) => {
+const moved = async (screenIndex) => {
   layout.forEach((item, index) => {
     if (bookmarksStore.activeFolder.screens[screenIndex].children[index]) {
       bookmarksStore.activeFolder.screens[screenIndex].children[index].x = item.x
@@ -318,20 +327,15 @@ const moved = (screenIndex) => {
     }
   })
   console.log(layout)
-  updateBookmarksContent()
+  await bookmarksStore.updateBookmarksContent()
 }
 
 
 
 function navigateToFolder(folder) {
   if (folder !== bookmarksStore.activeFolder) {
-    let currentFolder = bookmarksStore.activeFolder
     bookmarksStore.setActiveFolder(folder)
     buildGrid()
-    currentFolder.screens.forEach((screen) => {
-      screen.children = screen.children.filter(item => item.type !== 'removed')
-    })
-    console.log(currentFolder)
   }
 }
 
@@ -355,7 +359,6 @@ function findParentFolder(root, child) {
         for (let j = 0; j < screen.children.length; j++) {
           let item = screen.children[j];
           if (item === child) {
-            //console.log('PARENT FOLDER FROM INSIDE:', parent.name);
             result = parent;
             return;
           } else {
@@ -396,8 +399,8 @@ const openUrl = (bookmark) => {
 
 
 const handleItemClick = (item, event) => {
-  if (!event.target.classList.contains('vue-draggable-handle')) {
-    if (item !== undefined && item.type !== 'removed') {
+  if (!event.target.classList.contains('vue-draggable-handle') && !event.target.classList.contains('tool-btn')) {
+    if (item !== undefined) {
       if (item.type === 'folder') {
         navigateToFolder(item)
       } else if (item.type === 'bookmark') {
@@ -426,13 +429,13 @@ const handleCutClick = (array, index) => {
   remove(array, index)
 }
 
-const paste = (item) => {
+const paste = async (item) => {
   cutItem.value.x = item.x
   cutItem.value.y = item.y
   bookmarksStore.activeFolder.screens[+bookmarksStore.slide].children.push(cutItem.value)
   buildGrid()
   cutItem.value = null
-  updateBookmarksContent()
+  await bookmarksStore.updateBookmarksContent()
 }
 
 const openImportDialog = (item) => {

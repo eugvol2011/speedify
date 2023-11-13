@@ -21,6 +21,7 @@
     "quill-blot-formatter": "^1.0.5",
     "quill-magic-url": "^4.2.0",
     "vue-router": "^4.0.0",
+    "vue3-unicorn-log": "^1.0.0",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
